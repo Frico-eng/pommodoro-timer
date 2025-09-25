@@ -1,0 +1,828 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Pomodoro Timer</title>
+<style>
+  :root{
+    --bg:#0f1724;
+    --card:#0b1220;
+    --muted:#94a3b8;
+    --accent:#ff7a59;
+    --glass: rgba(255,255,255,0.03);
+    --success:#22c55e;
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  }
+  
+  html, body {
+    height: 100%;
+    margin: 0;
+    background: linear-gradient(180deg,#071025 0%, #081427 100%);
+    color: #e6eef8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  
+  .card {
+    width: 95vw;
+    height: 95vh;
+    max-width: 1400px;
+    max-height: 900px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border-radius: 14px;
+    padding: min(2.5vh, 25px) min(2.5vw, 25px);
+    box-shadow: 0 8px 30px rgba(2,6,23,0.6);
+    display: grid;
+    grid-template-columns: 1fr minmax(300px, 25%);
+    grid-template-rows: auto 1fr auto;
+    gap: min(2vh, 20px);
+    box-sizing: border-box;
+  }
+  
+  /* Responsive layout */
+  @media (max-width: 1024px) {
+    .card {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto auto 1fr auto;
+      height: 98vh;
+      width: 98vw;
+    }
+    
+    .settings {
+      grid-row: 2;
+      max-height: 300px;
+    }
+    
+    .timer {
+      grid-row: 3;
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .card {
+      padding: 15px;
+      gap: 15px;
+    }
+    
+    .bigtime {
+      font-size: 3rem !important;
+    }
+    
+    .row {
+      flex-direction: column;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .card {
+      padding: 10px;
+      border-radius: 10px;
+    }
+    
+    .bigtime {
+      font-size: 2.5rem !important;
+      letter-spacing: -1px !important;
+    }
+    
+    header {
+      flex-direction: column;
+      gap: 15px !important;
+    }
+    
+    .controls {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+  
+  @media (max-height: 600px) {
+    .card {
+      height: 99vh;
+      padding: 10px;
+    }
+    
+    .bigtime {
+      font-size: 2.5rem !important;
+    }
+    
+    .timer {
+      min-height: 180px !important;
+      padding: 12px !important;
+    }
+  }
+
+  header {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: min(2vw, 20px);
+    flex-wrap: wrap;
+  }
+  
+  h1 {
+    font-size: clamp(1.1rem, 2vw, 1.5rem);
+    margin: 0;
+    white-space: nowrap;
+  }
+  
+  .controls {
+    display: flex;
+    gap: clamp(6px, 1vw, 12px);
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  
+  button {
+    background: var(--accent);
+    border: none;
+    padding: clamp(8px, 1.5vh, 12px) clamp(10px, 1.5vw, 16px);
+    border-radius: 10px;
+    color: #081427;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: clamp(0.8rem, 1.5vw, 0.9rem);
+    white-space: nowrap;
+    min-height: 40px;
+  }
+  
+  button.secondary {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.06);
+    color: var(--muted);
+    font-weight: 600;
+  }
+  
+  button.ghost {
+    background: transparent;
+    color: var(--muted);
+    border-radius: 8px;
+    padding: clamp(6px, 1vh, 10px);
+  }
+  
+  .timer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: min(3vh, 25px);
+    border-radius: 12px;
+    background: var(--glass);
+    min-height: min(40vh, 300px);
+    box-sizing: border-box;
+  }
+  
+  .timer.flashing {
+    animation: flash 1s ease-in-out 3;
+  }
+  
+  @keyframes flash {
+    0%, 100% { background-color: var(--glass); }
+    50% { background-color: rgba(255, 122, 89, 0.2); }
+  }
+  
+  .bigtime {
+    font-size: clamp(2.5rem, 8vw, 5rem);
+    font-weight: 700;
+    letter-spacing: -3px;
+    margin: 0;
+    text-align: center;
+    line-height: 1.1;
+  }
+  
+  .label {
+    margin-top: clamp(4px, 1vh, 8px);
+    color: var(--muted);
+    font-size: clamp(0.8rem, 1.5vw, 0.9rem);
+  }
+  
+  .progress-wrap {
+    width: 100%;
+    margin-top: clamp(10px, 2vh, 20px);
+  }
+  
+  progress {
+    appearance: none;
+    width: 100%;
+    height: clamp(8px, 1.5vh, 12px);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  
+  progress::-webkit-progress-bar {
+    background: rgba(255,255,255,0.03);
+  }
+  
+  progress::-webkit-progress-value {
+    background: linear-gradient(90deg,var(--accent),#ffb199);
+  }
+  
+  .settings {
+    padding: clamp(12px, 2vh, 20px);
+    border-radius: 12px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));
+    display: flex;
+    flex-direction: column;
+    gap: clamp(8px, 1.5vh, 15px);
+    height: 100%;
+    box-sizing: border-box;
+    overflow-y: auto;
+  }
+  
+  label {
+    font-size: clamp(0.75rem, 1.2vw, 0.85rem);
+    color: var(--muted);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  
+  input[type=number], select {
+    padding: clamp(8px, 1.5vh, 12px);
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.04);
+    background: transparent;
+    color: inherit;
+    font-size: clamp(0.8rem, 1.2vw, 0.9rem);
+  }
+  
+  .row {
+    display: flex;
+    gap: clamp(8px, 1vw, 12px);
+  }
+  
+  .row > * {
+    flex: 1;
+  }
+  
+  .footer {
+    grid-column: 1/-1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--muted);
+    font-size: clamp(0.75rem, 1.2vw, 0.85rem);
+    padding-top: clamp(4px, 1vh, 8px);
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  
+  .cycles {
+    font-weight: 600;
+    color: var(--success);
+  }
+  
+  small.hint {
+    color: var(--muted);
+  }
+  
+  .stack {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(6px, 1vh, 10px);
+  }
+  
+  .muted {
+    color: var(--muted);
+  }
+  
+  .kbd {
+    background: rgba(255,255,255,0.03);
+    border-radius: 6px;
+    padding: 4px 6px;
+    font-size: clamp(0.7rem, 1vw, 0.8rem);
+  }
+  
+  .electron-controls {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    display: flex;
+    gap: 6px;
+    z-index: 1000;
+  }
+  
+  .electron-controls button {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: none;
+    padding: 0;
+    min-height: auto;
+  }
+  
+  .minimize-btn { background: #fdbc40; }
+  .maximize-btn { background: #34c749; }
+  .close-btn { background: #fc5753; }
+  
+  /* Scrollbar styling for settings */
+  .settings::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .settings::-webkit-scrollbar-track {
+    background: rgba(255,255,255,0.02);
+    border-radius: 3px;
+  }
+  
+  .settings::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.1);
+    border-radius: 3px;
+  }
+  
+  .settings::-webkit-scrollbar-thumb:hover {
+    background: rgba(255,255,255,0.2);
+  }
+</style>
+</head>
+<body>
+  <!-- Electron window controls for macOS-style -->
+  <div class="electron-controls">
+    <button class="close-btn" onclick="window.electronAPI?.windowControl('close')"></button>
+    <button class="minimize-btn" onclick="window.electronAPI?.windowControl('minimize')"></button>
+    <button class="maximize-btn" onclick="window.electronAPI?.windowControl('maximize')"></button>
+  </div>
+
+  <main class="card" role="application" aria-label="Custom Pomodoro timer">
+    <header>
+      <h1>Pomodoro Timer</h1>
+      <div class="controls" role="toolbar" aria-label="controls">
+        <button id="startBtn">Start</button>
+        <button id="pauseBtn" class="secondary">Pause</button>
+        <button id="resetBtn" class="ghost">Reset</button>
+      </div>
+    </header>
+
+    <section class="timer" aria-live="polite">
+      <div style="text-align:center">
+        <div id="modeLabel" class="label">Ready</div>
+        <div id="timeDisplay" class="bigtime" aria-atomic="true">25:00</div>
+        <div id="subLabel" class="label muted">0 / 0 cycles</div>
+      </div>
+
+      <div class="progress-wrap" aria-hidden="false">
+        <progress id="progress" value="0" max="100"></progress>
+      </div>
+
+      <div style="margin-top:12px;width:100%;display:flex;gap:8px;justify-content:center">
+        <button id="skipBtn" class="secondary">Skip</button>
+        <button id="soundBtn" class="ghost">🔊 Sound On</button>
+      </div>
+    </section>
+
+    <aside class="settings" aria-label="settings">
+      <div class="stack">
+        <label>Work length (minutes)
+          <input id="workMin" type="number" min="1" max="180" value="25" />
+        </label>
+        <label>Short break (minutes)
+          <input id="shortMin" type="number" min="1" max="60" value="5" />
+        </label>
+        <label>Long break (minutes)
+          <input id="longMin" type="number" min="1" max="120" value="15" />
+        </label>
+        <div class="row">
+          <label>Cycles before long break
+            <input id="cyclesBeforeLong" type="number" min="1" max="10" value="4" />
+          </label>
+          <label>Auto-start next?
+            <select id="autoStart">
+              <option value="true" selected>Yes</option>
+              <option value="false">No</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div class="stack" style="margin-top:auto">
+        <label>Desktop Notifications
+          <select id="notifyPerm">
+            <option value="sound">Sound Only</option>
+            <option value="system" selected>System Notification</option>
+            <option value="both">Sound + System</option>
+          </select>
+        </label>
+
+        <div style="display:flex;gap:8px;justify-content:space-between;align-items:center">
+          <div class="muted">Running as standalone app</div>
+          <button id="saveBtn" class="secondary">Save</button>
+        </div>
+      </div>
+    </aside>
+
+    <div class="footer">
+      <div><small class="hint">Timer runs accurately even when minimized</small></div>
+      <div class="muted">Cycles completed <span id="completedCycles" class="cycles">0</span></div>
+    </div>
+  </main>
+
+<script>
+/* ---- Pomodoro logic with Electron enhancements ---- */
+(() => {
+  // Elements
+  const startBtn = document.getElementById('startBtn');
+  const pauseBtn = document.getElementById('pauseBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const skipBtn = document.getElementById('skipBtn');
+  const soundBtn = document.getElementById('soundBtn');
+  const saveBtn = document.getElementById('saveBtn');
+  const timerEl = document.querySelector('.timer');
+
+  const workMin = document.getElementById('workMin');
+  const shortMin = document.getElementById('shortMin');
+  const longMin = document.getElementById('longMin');
+  const cyclesBeforeLong = document.getElementById('cyclesBeforeLong');
+  const autoStart = document.getElementById('autoStart');
+  const notifyPerm = document.getElementById('notifyPerm');
+
+  const timeDisplay = document.getElementById('timeDisplay');
+  const modeLabel = document.getElementById('modeLabel');
+  const subLabel = document.getElementById('subLabel');
+  const progressEl = document.getElementById('progress');
+  const completedCyclesEl = document.getElementById('completedCycles');
+
+  // State
+  let state = {
+    mode: 'work', // 'work' | 'short' | 'long'
+    running: false,
+    remaining: 25 * 60,
+    intervalId: null,
+    cycleCount: 0,
+    completedCycles: 0,
+    soundOn: true,
+    startTime: null,
+    elapsed: 0,
+    lastTick: Date.now()
+  };
+
+  // Audio context - initialize it once
+  let audioCtx = null;
+
+  // High-precision timer
+  function createPreciseTimer() {
+    if (state.intervalId) {
+      clearInterval(state.intervalId);
+    }
+    
+    state.startTime = Date.now();
+    state.elapsed = 0;
+    state.lastTick = Date.now();
+    
+    state.intervalId = setInterval(() => {
+      if (!state.running) return;
+      
+      const now = Date.now();
+      const delta = now - state.lastTick;
+      state.lastTick = now;
+      
+      state.elapsed += delta;
+      
+      // Calculate remaining time based on elapsed time
+      const totalDuration = state.durations[state.mode] * 1000;
+      const remainingMs = Math.max(0, totalDuration - state.elapsed);
+      state.remaining = Math.ceil(remainingMs / 1000);
+      
+      render();
+      
+      if (remainingMs <= 0) {
+        handlePeriodEnd();
+      }
+    }, 100);
+  }
+
+  // Load/save settings
+  const STORAGE_KEY = 'pomodoro_settings';
+  function loadSettings(){
+    try{
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      if(stored){
+        workMin.value = stored.workMin || 25;
+        shortMin.value = stored.shortMin || 5;
+        longMin.value = stored.longMin || 15;
+        cyclesBeforeLong.value = stored.cyclesBeforeLong || 4;
+        autoStart.value = stored.autoStart ?? 'true';
+        notifyPerm.value = stored.notifyPerm ?? 'system';
+        state.completedCycles = stored.completedCycles || 0;
+        state.soundOn = stored.soundOn !== false;
+        state.cycleCount = stored.cycleCount || 0;
+        completedCyclesEl.textContent = state.completedCycles;
+      }
+    }catch(e){}
+    applyDurationsToState();
+  }
+  
+  function saveSettings(){
+    const payload = {
+      workMin: Number(workMin.value),
+      shortMin: Number(shortMin.value),
+      longMin: Number(longMin.value),
+      cyclesBeforeLong: Number(cyclesBeforeLong.value),
+      autoStart: autoStart.value,
+      notifyPerm: notifyPerm.value,
+      completedCycles: state.completedCycles,
+      cycleCount: state.cycleCount,
+      soundOn: state.soundOn
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    flashSave();
+  }
+  
+  function flashSave(){
+    saveBtn.textContent = 'Saved';
+    setTimeout(()=> saveBtn.textContent = 'Save', 900);
+  }
+
+  // Durations helper
+  function applyDurationsToState(){
+    state.durations = {
+      work: (Number(workMin.value) || 25) * 60,
+      short: (Number(shortMin.value) || 5) * 60,
+      long: (Number(longMin.value) || 15) * 60,
+    };
+    
+    if(!state.running){
+      state.remaining = state.durations[state.mode];
+      render();
+    }
+  }
+
+  // Rendering
+  function fmt(seconds){
+    const m = Math.floor(seconds/60);
+    const s = seconds % 60;
+    return String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+  }
+  
+  function render(){
+    timeDisplay.textContent = fmt(state.remaining);
+    
+    // Update mode label
+    let modeText = 'Ready';
+    if (state.running) {
+      modeText = state.mode === 'work' ? 'Work Time' : 
+                 state.mode === 'short' ? 'Short Break' : 'Long Break';
+    }
+    modeLabel.textContent = modeText;
+    
+    subLabel.textContent = `${state.cycleCount} / ${cyclesBeforeLong.value} cycles`;
+    
+    // Update progress bar
+    const totalDuration = state.durations[state.mode];
+    const progressValue = totalDuration - state.remaining;
+    progressEl.max = totalDuration;
+    progressEl.value = progressValue;
+    
+    completedCyclesEl.textContent = state.completedCycles;
+    soundBtn.textContent = state.soundOn ? '🔊 Sound On' : '🔈 Sound Off';
+    startBtn.disabled = state.running;
+    pauseBtn.disabled = !state.running;
+    
+    // Update tray title with current status
+    if (window.electronAPI) {
+      const status = state.running ? `${fmt(state.remaining)} - ${modeText}` : 'Pomodoro Timer';
+      window.electronAPI.updateTrayTitle(status);
+    }
+  }
+
+  function handlePeriodEnd(){
+    console.log('Period ended, mode was:', state.mode);
+    
+    // Notify Electron main process
+    if (window.electronAPI) {
+      window.electronAPI.timerFinished(state.mode);
+    }
+    
+    // Visual feedback
+    timerEl.classList.add('flashing');
+    setTimeout(() => timerEl.classList.remove('flashing'), 3000);
+    
+    // Sound notification - ALWAYS play sound if sound is on, regardless of notifyPerm
+    if(state.soundOn) {
+      console.log('Playing sound notification');
+      beep();
+    } else {
+      console.log('Sound is disabled');
+    }
+    
+    // Handle mode transition
+    if(state.mode === 'work'){
+      state.completedCycles++;
+      state.cycleCount++;
+      
+      // Decide next break type
+      const shouldLong = state.cycleCount >= Number(cyclesBeforeLong.value);
+      state.mode = shouldLong ? 'long' : 'short';
+      
+      console.log('Work completed. Next mode:', state.mode, 'Cycle count:', state.cycleCount);
+    } else {
+      // Break ended, go back to work
+      state.mode = 'work';
+      console.log('Break completed. Going back to work');
+    }
+    
+    // Reset timer for new mode
+    state.remaining = state.durations[state.mode];
+    state.elapsed = 0;
+    state.startTime = Date.now();
+    
+    console.log('New mode:', state.mode, 'Duration:', state.durations[state.mode], 'seconds');
+    
+    saveSettings();
+    render();
+    
+    // Auto-start logic
+    if(autoStart.value === 'true'){
+      console.log('Auto-starting next period');
+      start();
+    } else {
+      console.log('Pausing after period end');
+      pause();
+    }
+  }
+
+  // Controls
+  function start(){
+    if(state.running) return;
+    
+    console.log('Starting timer, mode:', state.mode);
+    state.running = true;
+    state.startTime = Date.now() - (state.elapsed || 0);
+    createPreciseTimer();
+    render();
+  }
+  
+  function pause(){
+    console.log('Pausing timer');
+    state.running = false;
+    if (state.intervalId) {
+      clearInterval(state.intervalId);
+      state.intervalId = null;
+    }
+    render();
+  }
+  
+  function reset(){
+    console.log('Resetting timer');
+    pause();
+    state.mode = 'work';
+    state.cycleCount = 0;
+    state.elapsed = 0;
+    applyDurationsToState();
+    render();
+  }
+  
+  function skip(){
+    console.log('Skipping to next period');
+    // Force end current period
+    handlePeriodEnd();
+  }
+
+  // Improved Sound function
+  function ensureAudio() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      console.log('Audio context created');
+    }
+    if (audioCtx.state === "suspended") {
+      audioCtx.resume().then(() => {
+        console.log('Audio context resumed');
+      });
+    }
+    return audioCtx;
+  }
+
+  function beep() {
+    try {
+      const ctx = ensureAudio();
+      
+      // Create a more reliable beep using multiple oscillators
+      const playBeep = (frequency, duration, startTime) => {
+        const oscillator = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(ctx.destination);
+        
+        oscillator.frequency.value = frequency;
+        oscillator.type = 'sine';
+        
+        gainNode.gain.setValueAtTime(0.3, startTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+        
+        oscillator.start(startTime);
+        oscillator.stop(startTime + duration);
+      };
+      
+      const now = ctx.currentTime;
+      
+      // Play three distinct beeps
+      playBeep(880, 0.3, now);      // High beep
+      playBeep(660, 0.3, now + 0.4); // Medium beep
+      playBeep(440, 0.5, now + 0.8); // Low beep
+      
+      console.log('Beep sequence started');
+      
+    } catch (error) {
+      console.error('Error playing sound:', error);
+      
+      // Fallback: Try using HTML5 Audio as backup
+      try {
+        const audio = new Audio();
+        audio.src = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hREAxOn+LwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hREAxOn+LwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hREAxOn+LwtmMcBjiR1/LMeSwFJHfH8N2QQAo=';
+        audio.play().then(() => {
+          console.log('Fallback audio played');
+        }).catch(e => {
+          console.error('Fallback audio also failed:', e);
+        });
+      } catch (fallbackError) {
+        console.error('Fallback audio creation failed:', fallbackError);
+      }
+    }
+  }
+
+  // Test sound function (add this to test audio)
+  function testSound() {
+    console.log('Testing sound...');
+    if (state.soundOn) {
+      beep();
+    } else {
+      console.log('Sound is currently disabled. Enable sound first.');
+    }
+  }
+
+  // Event listeners
+  startBtn.addEventListener('click', start);
+  pauseBtn.addEventListener('click', pause);
+  resetBtn.addEventListener('click', reset);
+  skipBtn.addEventListener('click', skip);
+
+  soundBtn.addEventListener('click', ()=>{
+    state.soundOn = !state.soundOn;
+    render();
+    saveSettings();
+    
+    // Test sound when enabling
+    if (state.soundOn) {
+      setTimeout(() => {
+        console.log('Testing sound after enabling...');
+        beep();
+      }, 100);
+    }
+  });
+
+  [workMin, shortMin, longMin, cyclesBeforeLong, autoStart, notifyPerm].forEach(el => {
+    el.addEventListener('change', ()=>{
+      applyDurationsToState();
+      saveSettings();
+    });
+  });
+
+  saveBtn.addEventListener('click', saveSettings);
+
+  // Add a test sound button temporarily for debugging
+  const testButton = document.createElement('button');
+  testButton.textContent = 'Test Sound';
+  testButton.className = 'secondary';
+  testButton.style.marginTop = '10px';
+  testButton.addEventListener('click', testSound);
+  document.querySelector('.timer').appendChild(testButton);
+
+  // Keyboard shortcuts
+  window.addEventListener('keydown', (ev) => {
+    if(ev.code === 'Space'){
+      ev.preventDefault();
+      state.running ? pause() : start();
+    } else if(ev.key.toLowerCase() === 'r'){
+      reset();
+    } else if(ev.key.toLowerCase() === 't'){
+      testSound(); // Press 'T' to test sound
+    }
+  });
+
+  // Initialize audio context on user interaction (required by browsers)
+  document.addEventListener('click', function initAudio() {
+    if (!audioCtx) {
+      ensureAudio();
+    }
+    document.removeEventListener('click', initAudio);
+  }, { once: true });
+
+  // Initialize
+  loadSettings();
+  applyDurationsToState();
+  render();
+
+  // Debug info
+  console.log('Pomodoro Timer initialized');
+  console.log('Sound enabled:', state.soundOn);
+  console.log('Initial state:', state);
+  
+  // Expose test function globally for debugging
+  window.testSound = testSound;
+})();
+</script>
+</body>
+</html>
